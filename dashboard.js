@@ -1,37 +1,52 @@
 let problems = [];
+let activeTopicFilters = new Set(); // Stores our multi-select topics
 
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('dsaForm').addEventListener('submit', saveProblem);
   document.getElementById('cancelBtn').addEventListener('click', resetForm);
   
-  // Browsing Filters
+  // Searching & Toggles
   document.getElementById('search').addEventListener('input', render);
   document.getElementById('filterStatus').addEventListener('change', render);
-  document.getElementById('filterTopic').addEventListener('change', render);
   document.getElementById('filterImportant').addEventListener('change', render);
+  
+  // 🧠 Add Topic to Active Filters when selected from Dropdown
+  document.getElementById('filterTopic').addEventListener('change', (e) => {
+    const val = e.target.value;
+    if (val !== '') {
+      activeTopicFilters.add(val);
+      e.target.value = ''; // Reset dropdown instantly
+      render();
+    }
+  });
   
   // Import/Export
   document.getElementById('exportBtn').addEventListener('click', exportJSON);
   document.getElementById('importBtn').addEventListener('click', () => document.getElementById('fileInput').click());
   document.getElementById('fileInput').addEventListener('change', importJSON);
 
-  // Event Delegation for dynamically created elements
-  document.getElementById('problemsList').addEventListener('click', (e) => {
+  // Global Click Events (Delegation)
+  document.addEventListener('click', (e) => {
     // Edit & Delete
     if (e.target.classList.contains('edit-btn')) {
       editProblem(parseInt(e.target.dataset.index));
     } else if (e.target.classList.contains('delete-btn')) {
       deleteProblem(parseInt(e.target.dataset.index));
     } 
-    // Quick Toggle Star / Review
+    // Toggle Star
     else if (e.target.closest('.star-btn')) {
       const btn = e.target.closest('.star-btn');
       toggleImportant(parseInt(btn.dataset.index));
     }
-    // Click a tag to quick-filter by that topic
+    // 🧠 Click a tag on a card to instantly add it to filters
     else if (e.target.classList.contains('tag')) {
-      const topic = e.target.innerText;
-      document.getElementById('filterTopic').value = topic;
+      activeTopicFilters.add(e.target.innerText);
+      render();
+    }
+    // 🧠 Click the 'x' on an active filter pill to remove it
+    else if (e.target.closest('.remove-topic-btn')) {
+      const btn = e.target.closest('.remove-topic-btn');
+      activeTopicFilters.delete(btn.dataset.topic);
       render();
     }
   });
@@ -112,34 +127,46 @@ function resetForm() {
   document.getElementById('cancelBtn').style.display = 'none';
 }
 
-// Extract all unique topics to populate the filter dropdown
+// 🧠 Update Topic Dropdown, hiding topics we already have active
 function updateTopicDropdown() {
   const select = document.getElementById('filterTopic');
-  const currentVal = select.value;
-  
   const topicSet = new Set();
+  
+  // Extract all unique topics
   problems.forEach(p => (p.topics || []).forEach(t => topicSet.add(t)));
   
-  let optionsHTML = '<option value="all">All Topics</option>';
+  let optionsHTML = '<option value="">+ Add Topic Filter...</option>';
   [...topicSet].sort().forEach(t => {
-    optionsHTML += `<option value="${t}">${t}</option>`;
+    // Only show topics in dropdown if they aren't currently active
+    if (!activeTopicFilters.has(t)) {
+      optionsHTML += `<option value="${t}">${t}</option>`;
+    }
   });
   
   select.innerHTML = optionsHTML;
-  
-  // Re-select if it still exists
-  if ([...topicSet].includes(currentVal) || currentVal === 'all') {
-    select.value = currentVal;
-  }
 }
 
-// Format exact time beautifully: "Sep 2, 2026, 3:05 PM"
+function renderActiveTopicPills() {
+  const container = document.getElementById('activeTopicFilters');
+  if (activeTopicFilters.size === 0) {
+    container.innerHTML = '';
+    return;
+  }
+  
+  container.innerHTML = [...activeTopicFilters].map(t => `
+    <div class="filter-pill">
+      ${t} 
+      <button class="remove-topic-btn" data-topic="${t}" title="Remove Filter">&times;</button>
+    </div>
+  `).join('');
+}
+
 function formatDateTime(p) {
   if (p.timestamp) {
     const d = new Date(p.timestamp);
     return d.toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
   }
-  return p.date; // Fallback for old entries before this update
+  return p.date; 
 }
 
 function getBadgeClass(s) { return s === 'solved' ? 'badge-solved' : s === 'hint' ? 'badge-hint' : 'badge-failed'; }
@@ -147,20 +174,22 @@ function getStatusLabel(s) { return s === 'solved' ? 'Solved' : s === 'hint' ? '
 
 function render() {
   updateTopicDropdown();
+  renderActiveTopicPills();
 
   const listEl = document.getElementById('problemsList');
   const search = document.getElementById('search').value.toLowerCase();
   const filterStatus = document.getElementById('filterStatus').value;
-  const filterTopic = document.getElementById('filterTopic').value;
   const filterImportant = document.getElementById('filterImportant').checked;
 
   const filtered = problems.filter(p => {
     const matchesSearch = p.title.toLowerCase().includes(search) || (p.notes && p.notes.toLowerCase().includes(search));
     const matchesStatus = filterStatus === 'all' || p.status === filterStatus;
-    const matchesTopic = filterTopic === 'all' || (p.topics && p.topics.includes(filterTopic));
     const matchesImportant = !filterImportant || p.isImportant;
     
-    return matchesSearch && matchesStatus && matchesTopic && matchesImportant;
+    // 🧠 MULTI-SELECT LOGIC (AND): Problem must have ALL selected topics to show up
+    const matchesTopics = activeTopicFilters.size === 0 || [...activeTopicFilters].every(activeTag => p.topics && p.topics.includes(activeTag));
+    
+    return matchesSearch && matchesStatus && matchesImportant && matchesTopics;
   });
 
   if (!filtered.length) { 
@@ -188,7 +217,7 @@ function render() {
           <span><strong>Time:</strong> ${formatDateTime(p)}</span>
         </div>
         
-        ${p.topics && p.topics.length ? `<div class="tags-list">${p.topics.map(t => `<span class="tag" title="Click to filter by ${t}">${t}</span>`).join('')}</div>` : ''}
+        ${p.topics && p.topics.length ? `<div class="tags-list">${p.topics.map(t => `<span class="tag" title="Add to filters">${t}</span>`).join('')}</div>` : ''}
         ${p.notes ? `<div class="notes">${p.notes}</div>` : ''}
         
         <div class="card-actions">

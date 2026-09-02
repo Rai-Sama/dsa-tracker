@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "DSA Auto-Tracker",
+  "version": "1.0",
+  "description": "Auto-tracks LeetCode and NeetCode submissions.",
+  "permissions": ["storage"],
+  "action": {
+    "default_title": "Open DSA Dashboard"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://leetcode.com/problems/*", "*://neetcode.io/problems/*"],
+      "css": ["content.css"],
+      "js": ["content.js"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["inject.js"],
+      "matches": ["*://leetcode.com/*", "*://neetcode.io/*"]
+    }
+  ]
+}

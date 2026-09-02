@@ -17,23 +17,20 @@ if (window.location.hostname.includes('neetcode')) {
   document.addEventListener('click', (e) => {
     let target = e.target.closest('button');
     if (target && target.innerText.toLowerCase().includes('submit')) {
-      // Button was clicked, watch the page for 15 seconds
       let checks = 0;
       const interval = setInterval(() => {
         checks++;
         const html = document.body.innerHTML;
-        // Look for the specific green accepted text
         if (html.includes('Accepted') && (html.includes('text-green') || html.includes('text-success'))) {
           clearInterval(interval);
           setTimeout(showLogModal, 500);
         }
-        if (checks > 30) clearInterval(interval); // Timeout after 15s
+        if (checks > 30) clearInterval(interval); 
       }, 500);
     }
   });
 }
 
-// Ensure modal only opens once per success
 let modalOpen = false;
 
 // Render Modal
@@ -46,60 +43,101 @@ function showLogModal() {
   const problemTitle = rawName.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
   const platform = window.location.hostname.includes('leetcode') ? 'LeetCode' : 'NeetCode';
 
+  const bg = document.createElement("div");
+  bg.id = "dsa-tracker-bg";
+  bg.style.cssText = "position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); z-index: 999998;";
+
   const overlay = document.createElement("div");
   overlay.id = "dsa-tracker-overlay";
+  // Added strict flex-column layout and box-sizing resets
+  overlay.style.cssText = "position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background:#1e293b; color:#f8fafc; width:400px; max-width: 95vw; max-height: 95vh; overflow-y: auto; padding:24px; border-radius:8px; border:1px solid #334155; font-family:-apple-system, sans-serif; z-index: 999999; box-shadow: 0 10px 25px rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: stretch; gap: 12px; box-sizing: border-box; text-align: left;";
   
+  // Added strict display:block, box-sizing, and width:100% to all inner elements
   overlay.innerHTML = `
-    <div id="dsa-tracker-modal" style="background:#1e293b; color:#f8fafc; width:400px; padding:24px; border-radius:8px; border:1px solid #334155; font-family:sans-serif;">
-      <h2 style="color:#38bdf8; margin-top:0;">🎉 Accepted! Log it?</h2>
-      
-      <label style="font-size:12px; color:#94a3b8; display:block; margin:10px 0 4px;">Problem</label>
-      <input type="text" id="dsa-title" value="${problemTitle}" readonly style="width:100%; box-sizing:border-box; background:#0f172a; color:#cbd5e1; border:1px solid #334155; padding:8px; border-radius:4px;">
-      
-      <label style="font-size:12px; color:#94a3b8; display:block; margin:10px 0 4px;">Topics (comma separated)</label>
-      <input type="text" id="dsa-topics" placeholder="e.g. Hash Map, Array" style="width:100%; box-sizing:border-box; background:#0f172a; color:#f8fafc; border:1px solid #334155; padding:8px; border-radius:4px;">
-      
-      <label style="font-size:12px; color:#94a3b8; display:block; margin:10px 0 4px;">Difficulty / Assistance</label>
-      <select id="dsa-status" style="width:100%; box-sizing:border-box; background:#0f172a; color:#f8fafc; border:1px solid #334155; padding:8px; border-radius:4px;">
+    <h2 style="color:#38bdf8; margin:0 0 4px 0; font-size: 20px; line-height: 1.2; display: block;">🎉 Accepted! Log it?</h2>
+    
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+      <label style="font-size:12px; color:#94a3b8; display:block; margin:0;">Problem</label>
+      <input type="text" id="dsa-title" value="${problemTitle}" style="width:100%; box-sizing:border-box; background:#0f172a; color:#cbd5e1; border:1px solid #334155; padding:8px; border-radius:4px; display: block; margin:0; font-size: 14px; line-height: 1.4;">
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+      <label style="font-size:12px; color:#94a3b8; display:block; margin:0;">Topics (comma separated)</label>
+      <input type="text" id="dsa-topics" placeholder="e.g. Hash Map, Array" style="width:100%; box-sizing:border-box; background:#0f172a; color:#f8fafc; border:1px solid #334155; padding:8px; border-radius:4px; display: block; margin:0; font-size: 14px; line-height: 1.4;">
+    </div>
+    
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+      <label style="font-size:12px; color:#94a3b8; display:block; margin:0;">Difficulty / Assistance</label>
+      <select id="dsa-status" style="width:100%; box-sizing:border-box; background:#0f172a; color:#f8fafc; border:1px solid #334155; padding:8px; border-radius:4px; display: block; margin:0; font-size: 14px; line-height: 1.4;">
         <option value="solved">Solved Solitary / Optimal</option>
         <option value="hint">Needed Hint / Partial Help</option>
         <option value="failed">Heavy Help / Revisit Later</option>
       </select>
-      
-      <label style="font-size:12px; color:#94a3b8; display:block; margin:10px 0 4px;">Notes & Takeaways</label>
-      <textarea id="dsa-notes" style="width:100%; box-sizing:border-box; background:#0f172a; color:#f8fafc; border:1px solid #334155; padding:8px; border-radius:4px; min-height:80px;"></textarea>
-      
-      <div style="display:flex; gap:10px; margin-top:20px;">
-        <button id="dsa-btn-cancel" style="flex:1; padding:10px; border:none; border-radius:4px; background:#334155; color:#f8fafc; cursor:pointer; font-weight:bold;">Skip</button>
-        <button id="dsa-btn-save" style="flex:1; padding:10px; border:none; border-radius:4px; background:#38bdf8; color:#0f172a; cursor:pointer; font-weight:bold;">Save Entry</button>
-      </div>
+    </div>
+    
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+      <label style="font-size:12px; color:#94a3b8; display:block; margin:0;">Notes & Takeaways</label>
+      <textarea id="dsa-notes" style="width:100%; box-sizing:border-box; background:#0f172a; color:#f8fafc; border:1px solid #334155; padding:8px; border-radius:4px; min-height:80px; display: block; margin:0; font-size: 14px; line-height: 1.4; resize: vertical;"></textarea>
+    </div>
+    
+    <label style="font-size:13px; font-weight:bold; color:#eab308; display:flex; align-items:center; gap:8px; margin:4px 0; cursor:pointer;">
+      <input type="checkbox" id="dsa-important" style="width:16px; height:16px; cursor:pointer; margin:0;">
+      ⭐ Mark as Important / Needs Review
+    </label>
+
+    <div style="display:flex; gap:10px; margin-top:8px;">
+      <button id="dsa-btn-cancel" style="flex:1; padding:10px; border:none; border-radius:4px; background:#334155; color:#f8fafc; cursor:pointer; font-weight:bold; font-size:14px;">Skip</button>
+      <button id="dsa-btn-save" style="flex:1; padding:10px; border:none; border-radius:4px; background:#38bdf8; color:#0f172a; cursor:pointer; font-weight:bold; font-size:14px;">Save Entry</button>
     </div>
   `;
 
+  document.body.appendChild(bg);
   document.body.appendChild(overlay);
 
-  document.getElementById("dsa-btn-cancel").onclick = () => {
-    overlay.remove();
-    modalOpen = false;
-  };
-  
-  document.getElementById("dsa-btn-save").onclick = () => {
-    const newEntry = {
-      title: problemTitle,
-      platform: platform,
-      url: window.location.href.split('/description')[0].split('/submissions')[0], 
-      topics: document.getElementById('dsa-topics').value.split(',').map(t => t.trim()).filter(Boolean),
-      status: document.getElementById('dsa-status').value,
-      notes: document.getElementById('dsa-notes').value,
-      date: new Date().toISOString().split('T')[0]
-    };
+  overlay.addEventListener('click', (e) => e.stopPropagation());
 
-    chrome.storage.local.get({ dsa_problems: [] }, (result) => {
-      const updatedList = [newEntry, ...result.dsa_problems];
-      chrome.storage.local.set({ dsa_problems: updatedList }, () => {
-        overlay.remove();
-        modalOpen = false;
+  document.getElementById("dsa-btn-cancel").addEventListener("click", (e) => {
+    e.preventDefault();
+    overlay.remove(); bg.remove();
+    modalOpen = false;
+  });
+  
+  document.getElementById("dsa-btn-save").addEventListener("click", (e) => {
+    e.preventDefault();
+
+    if (typeof chrome === 'undefined' || !chrome.storage) {
+      alert("Extension connection lost! Please refresh this page (F5) and try again.");
+      return;
+    }
+
+    const saveBtn = document.getElementById("dsa-btn-save");
+    saveBtn.innerText = "Saving...";
+    saveBtn.disabled = true;
+
+    try {
+      const now = new Date();
+      const newEntry = {
+        title: document.getElementById('dsa-title').value,
+        platform: platform,
+        url: window.location.href.split('/description')[0].split('/submissions')[0], 
+        topics: document.getElementById('dsa-topics').value.split(',').map(t => t.trim()).filter(Boolean),
+        status: document.getElementById('dsa-status').value,
+        notes: document.getElementById('dsa-notes').value,
+        date: now.toISOString().split('T')[0],
+        timestamp: now.toISOString(), 
+        isImportant: document.getElementById('dsa-important').checked 
+      };
+
+      chrome.storage.local.get({ dsa_problems: [] }, (result) => {
+        const updatedList = [newEntry, ...result.dsa_problems];
+        chrome.storage.local.set({ dsa_problems: updatedList }, () => {
+          overlay.remove(); bg.remove();
+          modalOpen = false;
+        });
       });
-    });
-  };
+    } catch (err) {
+      console.error("DSA Tracker Save Error:", err);
+      saveBtn.innerText = "Error Saving";
+    }
+  });
 }
